@@ -194,4 +194,4 @@ class pos_order(osv.osv):
         return r
 pos_order()
 
-# v:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
+# vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
