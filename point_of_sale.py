@@ -183,7 +183,9 @@ class pos_order(osv.osv):
             for op1, op2, pay in data['statement_ids']:
                 payment_journal = journal_obj.browse(cr, uid, pay['journal_id'])
                 ticket["payments"].append({
-                    "type": "pay",
+                    "null_pay": False,
+                    "include_in_arching": False,
+                    "card_pay": False,
                     "extra_description": "",
                     "description": payment_journal.name,
                     "amount": pay['amount'],
