@@ -191,7 +191,7 @@ class pos_order(osv.osv):
                     "amount": pay['amount'],
                 })
 
-            journal.make_fiscal_ticket(ticket)
+            journal.make_ticket_factura(ticket)
 
         return r
 pos_order()
