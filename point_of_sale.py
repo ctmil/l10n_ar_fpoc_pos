@@ -36,19 +36,22 @@ pos_session()
 class pos_order(osv.osv):
     _inherit = "pos.order"
 
-    def create_from_ui(self, cr, uid, orders, context=None):
+    def create_from_ui_v2(self, cr, uid, orders, context=None):
         session_obj = self.pool.get('pos.session')
         partner_obj = self.pool.get('res.partner')
         user_obj = self.pool.get('res.users')
         product_obj = self.pool.get('product.product')
         journal_obj = self.pool.get('account.journal')
 
-        r = super(pos_order, self).create_from_ui(cr, uid, orders, context=context)
-        for idx, _id in enumerate(r):
-            data = orders[idx]['data']
-            session = session_obj.browse(cr, uid, data['pos_session_id'])
+        #r = super(pos_order, self).create_from_ui(cr, uid, orders, context=context)
+        #for idx, _id in enumerate(r):
+	for idx in orders:
+            #data = orders[idx]['data']
+	    order = self.pool.get('pos.order').browse(cr,uid,idx)	
+            #session = session_obj.browse(cr, uid, data['pos_session_id'])
+            session = order.session_id
             journal = session.config_id.journal_id
-            user = user_obj.browse(cr, uid, data['user_id'])
+            user = order.user_id
 
             if not journal.use_fiscal_printer:
                 continue
@@ -62,13 +65,13 @@ class pos_order(osv.osv):
             if not journal.fiscal_printer_fiscal_state in ['open']:
                 raise osv.except_osv(_('Error!'), _('You can\'t print in a closed printer.'))
 
-            if not journal.fiscal_printer_paper_state in ['ok']:
-                raise osv.except_osv(_('Error!'), _('You can\'t print in low level of paper printer.'))
+            #if not journal.fiscal_printer_paper_state in ['ok']:
+            #    raise osv.except_osv(_('Error!'), _('You can\'t print in low level of paper printer.'))
 
             if not journal.fiscal_printer_anon_partner_id:
                 raise osv.except_osv(_('Error'), _('You must set anonymous partner to the journal.'))
 
-            partner = partner_obj.browse(cr, uid, data['partner_id'])
+            partner = order.partner_id
             if not partner:
                 partner = journal.fiscal_printer_anon_partner_id
 
@@ -102,8 +105,9 @@ class pos_order(osv.osv):
                 "tail_no_3": 0,
                 "tail_text_3": "",
             }
-            for op1, op2, line in data['lines']:
-                product = product_obj.browse(cr, uid, line['product_id'])
+            #for op1, op2, line in data['lines']:
+            for line in order.lines:
+                product = line.product_id
                 ticket["lines"].append({
                     "item_action": "sale_item",
                     "as_gross": False,
@@ -117,43 +121,47 @@ class pos_order(osv.osv):
                     "description_3": "",
                     "description_4": "",
                     "item_description": product.name,
-                    "quantity": line['qty'],
-                    "unit_price": line['price_unit'],
+                    #"quantity": line['qty'],
+                    #"unit_price": line['price_unit'],
+                    "quantity": line.qty,
+                    "unit_price": line.price_unit,
                     "vat_rate": 0, # TODO
                     "fixed_taxes": 0,
                     "taxes_rate": 0
                 })
-                if line['discount'] > 0: ticket["lines"].append({
-                    "item_action": "discount_item",
-                    "as_gross": False,
-                    "send_subtotal": True,
-                    "check_item": False,
-                    "collect_type": "q",
-                    "large_label": "",
-                    "first_line_label": "",
-                    "description": "",
-                    "description_2": "",
-                    "description_3": "",
-                    "description_4": "",
-                    "item_description": "%5.2f%%" % line['discount'],
-                    "quantity": line['qty'],
-                    "unit_price": line['price_unit'] * (line['discount']/100.),
-                    "vat_rate": 0.0, # TODO
-                    "fixed_taxes": 0,
-                    "taxes_rate": 0
-                })
-            for op1, op2, pay in data['statement_ids']:
-                payment_journal = journal_obj.browse(cr, uid, pay['journal_id'])
+                if line.discount > 0: 
+			ticket["lines"].append({
+	                    "item_action": "discount_item",
+        	            "as_gross": False,
+	                    "send_subtotal": True,
+        	            "check_item": False,
+                	    "collect_type": "q",
+	                    "large_label": "",
+        	            "first_line_label": "",
+                	    "description": "",
+	                    "description_2": "",
+        	            "description_3": "",
+                	    "description_4": "",
+	                    "item_description": "%5.2f%%" % line.discount,
+        	            "quantity": line.qty,
+                	    "unit_price": line.price_unit * (line.discount/100.),
+	                    "vat_rate": 0.0, # TODO
+        	            "fixed_taxes": 0,
+                	    "taxes_rate": 0
+	                })
+            for pay in order.statement_ids:
+                payment_journal = journal_obj.browse(cr, uid, pay.journal_id.id)
                 ticket["payments"].append({
                     "type": "pay",
                     "extra_description": "",
                     "description": payment_journal.name,
-                    "amount": pay['amount'],
+                    "amount": pay.amount,
                 })
  
             ticket_resp = journal.make_fiscal_ticket(ticket)
 
-        return r
+        #return r
+        return None 
 pos_order()
 
 # v:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
