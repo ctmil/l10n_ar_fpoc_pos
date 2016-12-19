@@ -9,6 +9,7 @@ from openerp.tools.translate import _
 
 from openerp.addons.l10n_ar_fpoc.invoice import document_type_map, responsability_map
 
+
 class pos_session(osv.osv):
     _inherit = 'pos.session'
 
@@ -108,6 +109,9 @@ class pos_order(osv.osv):
             #for op1, op2, line in data['lines']:
             for line in order.lines:
                 product = line.product_id
+		tax_rate = 0
+		for tax in product.taxes_id:
+			tax_rate = tax.amount * 100
                 ticket["lines"].append({
                     "item_action": "sale_item",
                     "as_gross": False,
@@ -125,7 +129,7 @@ class pos_order(osv.osv):
                     #"unit_price": line['price_unit'],
                     "quantity": line.qty,
                     "unit_price": line.price_unit,
-                    "vat_rate": 0, # TODO
+                    "vat_rate": tax_rate, # TODO
                     "fixed_taxes": 0,
                     "taxes_rate": 0
                 })
@@ -145,7 +149,7 @@ class pos_order(osv.osv):
 	                    "item_description": "%5.2f%%" % line.discount,
         	            "quantity": line.qty,
                 	    "unit_price": line.price_unit * (line.discount/100.),
-	                    "vat_rate": 0.0, # TODO
+	                    "vat_rate": tax_rate, # TODO
         	            "fixed_taxes": 0,
                 	    "taxes_rate": 0
 	                })
