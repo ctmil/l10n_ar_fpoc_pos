@@ -141,6 +141,9 @@ class pos_order(osv.osv):
 		tax_rate = 0
 		for tax in product.taxes_id:
 			tax_rate = tax.amount * 100
+		description = ''
+		if line.has_key('previous_discount') and line['previous_discount'] > 0:
+			description = 'Dto - %'  + str(line['previous_discount'])
                 ticket["lines"].append({
                     "item_action": "sale_item",
                     "as_gross": False,
@@ -149,7 +152,7 @@ class pos_order(osv.osv):
                     "collect_type": "q",
                     "large_label": "",
                     "first_line_label": "",
-                    "description": "",
+                    "description": description,
                     "description_2": "",
                     "description_3": "",
                     "description_4": "",
@@ -162,28 +165,26 @@ class pos_order(osv.osv):
                     "fixed_taxes": 0,
                     "taxes_rate": 0
                 })
-		"""
-                if line.discount > 0: 
-			ticket["lines"].append({
-	                    "item_action": "discount_item",
-        	            "as_gross": False,
-	                    "send_subtotal": True,
-        	            "check_item": False,
-                	    "collect_type": "q",
-	                    "large_label": "",
-        	            "first_line_label": "",
-                	    "description": "",
-	                    "description_2": "",
-        	            "description_3": "",
-                	    "description_4": "",
-	                    "item_description": "%5.2f%%" % line.discount,
-        	            "quantity": line.qty,
-                	    "unit_price": line.price_unit * (line.discount/100.),
-	                    "vat_rate": tax_rate, # TODO
-        	            "fixed_taxes": 0,
-                	    "taxes_rate": 0
-	                })
-		"""
+                #if line['previous_discount'] > 0: 
+			#ticket["lines"].append({
+	                #    "item_action": "discount_item",
+        	        #    "as_gross": False,
+	                #    "send_subtotal": True,
+        	        #    "check_item": False,
+                	#    "collect_type": "q",
+	                #    "large_label": "",
+        	        #    "first_line_label": "",
+                	#    "description": "",
+	                #    "description_2": "",
+        	        #    "description_3": "",
+                	#    "description_4": "",
+	                #    "item_description": "%5.2f%%" % line['previous_discount'],
+        	        #    "quantity": 1,
+                	#    "unit_price": line['price_unit'] * (line['previous_discount']/100),
+	                #    "vat_rate": tax_rate, # TODO
+        	        #    "fixed_taxes": 0,
+                	#    "taxes_rate": 0
+	                #})
             #for pay in order.statement_ids:
             for op1, op2, pay in data['statement_ids']:
                 payment_journal = journal_obj.browse(cr, uid, pay['journal_id'])
@@ -193,9 +194,13 @@ class pos_order(osv.osv):
                     "description": payment_journal.name,
                     "amount": pay['amount'],
                 })
-	    #import pdb;pdb.set_trace() 
             ticket_resp = journal.make_fiscal_ticket(ticket)
-	    if ticket_resp:
+	    error_printing = False
+	    if type(ticket_resp) == dict:
+		if type(ticket_resp.values()) == list:
+		    if 'error' in ticket_resp.values()[0]:
+			error_printing = True	
+	    if ticket_resp and not error_printing:
 		if responsability_map.get(partner.responsability_id.code, "F") == 'F':
 			ticket_number = journal.last_b_sale_document_completed
 		else:
